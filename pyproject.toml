@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "plasmo"
+version = "0.1.0"
+description = ""
+authors = ["Matt Rixman <MatrixManAtYrService@users.noreply.github.com>"]
+readme = "README.md"
+packages = [
+  { include = "plasmo", from ="src"},
+]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pytest = "^7.4.4"
+pdoc = "^14.4.0"
+typer = "^0.9.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.4"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+poetry = "poetry.console.application:main"
+plasmo = "plasmo.cli:cli"
