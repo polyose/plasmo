@@ -16,7 +16,7 @@ Creating a cell requires some nix understanding, but using one only [requires th
 
 ### Adding a cell
 
-Use `desmata add` to refer to a cell in another repo, and tell it where to put the cell is your repo:
+Use `desmata add` to refer to a cell in another repo, and tell it where to put the cell in your repo:
 ```
 $ tree
   .
@@ -52,7 +52,9 @@ def test_pg():
 This example does not use your system's postgres, rather it uses the contents of `flake.nix` and `flake.lock` to build (or download) one for this project.
 This gives you stronger guarantees that all users of your project get the same version of postgres, while still ensuring that users on different architectures get something that works.
 
-TODO: a better example which makes it clear why you might prefer this to just using a docker container.
+Desmata intends to provide strong encapsulation where it counts (that's Nix's job), while also remaining quite permiable.
+That's why you end up with new files in your repo: you may want to to edit these to specialize the cell to meet your needs.
+Later, other users with similar needs may want to add a cell based on your changes (this is how cells evolve). 
 
 ### Writing a cell
 
