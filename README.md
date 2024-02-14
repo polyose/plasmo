@@ -6,7 +6,7 @@ Desmata is under construction, come back later.
 
 | word | definition |
 | :---- | :---------- |
-| Plasmo**desmata** | (singular: plasmodesma) are microscopic channels which traverse the cell walls of adjacent plant cells, enabling transport and comunication between them. |
+| Plasmo**desmata** | (singular: plasmodesma) are microscopic channels which traverse the walls of adjacent plant cells, enabling transport and comunication between them. |
 | `desmata` | is a python library (and cli command) for managing subsets of a git repository (and their dependencies) as if they were seperate cells. |
 | `desmata.py` | conventionally defines a python module which inticates that its parent folder can be managed with `desmata`, these are typically found near a `flake.nix` and a `flake.lock`. |
 
