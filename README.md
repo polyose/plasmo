@@ -4,10 +4,9 @@ Desmata is under construction, come back later.
 
 # Make Your Repo Multicellular
 
-| word | definition |
-| :---- | :---------- |
-| Plasmo**desmata** | (singular: plasmodesma) are microscopic channels which traverse the walls of adjacent plant cells, enabling transport and comunication between them. |
-| `desmata` | is a python library (and cli command) for managing subsets of a git repository (and their dependencies) as if they were seperate cells. |
+
+- Plasmo**desmata**  (singular: plasmodesma) are microscopic channels which traverse the walls of adjacent plant cells, enabling transport and comunication between them.
+- `desmata` is a python library (and cli command) for managing subsets of a git repository (and their dependencies) as if they were seperate cells. 
 
 Desmata lets users create and share "cells", which are pythonic interfaces into [Nix](https://github.com/NixOS/nix)-managed environments.
 Creating a cell requires some nix understanding, but using one only [requires that nix be installled](https://determinate.systems/posts/determinate-nix-installer).
