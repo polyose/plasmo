@@ -2,7 +2,7 @@ Desmata is under construction, come back later.
 
 <img src='banner.png' width='800'>
 
-# Make your Repo Multicellular
+# Make Your Repo Multicellular
 
 | word | definition |
 | :---- | :---------- |
