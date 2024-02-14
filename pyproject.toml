@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "plasmo"
+name = "desmata"
 version = "0.1.0"
 description = ""
 authors = ["Matt Rixman <MatrixManAtYrService@users.noreply.github.com>"]
 readme = "README.md"
 packages = [
-  { include = "plasmo", from ="src"},
+  { include = "desmata", from ="src"},
 ]
 
 [tool.poetry.dependencies]
@@ -23,4 +23,4 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 poetry = "poetry.console.application:main"
-plasmo = "plasmo.cli:cli"
+desmata = "desmata.cli:cli"

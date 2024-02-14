@@ -9,12 +9,12 @@ app = typer.Typer()
 
 def _cli_logger(verbose: bool) -> Logger:
     """
-    Plasmo is dependency-injected, a logger is one such dependency.
+    Desmata is dependency-injected, a logger is one such dependency.
     Call this to get one.
         
-    :return: A logger to be used when plasmo is invoked via the CLI.
+    :return: A logger to be used when desmata is invoked via the CLI.
     """
-    log = getLogger("  plasmo.cli")
+    log = getLogger("  desmata.cli")
     if verbose:
         log.setLevel(logging.DEBUG)
     else:
