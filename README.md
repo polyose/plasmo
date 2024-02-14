@@ -58,7 +58,7 @@ Later, other users with similar needs may want to add a cell based on your chang
 
 ### Writing a cell
 
-This section is TODO, tldr:  implement the `Desma` abstract class in `desmata.py`.
+This section is TODO, summary: implement the `Desma` abstract base class in `desmata.py`.
 
 ## P2P Aspirations
 
