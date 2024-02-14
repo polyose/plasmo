@@ -20,7 +20,7 @@ When you use desmata to add one or more "cells" to a project repo, you get somet
 Desmata cells rely on [nix](https://github.com/NixOS/nix) to handle their dependencies, so if you use it to add a cell to your repo, that cell's dependencies will be managed more completely than you might expect from something like `pip`.
 
 ### Less Encapsulated
-Unlike `pip` or `poetry`, desmata cells are moved in and out of repo's not as a references, but as a bunch of code.
+Unlike `pip` or `poetry`, desmata cells are moved in and out of repos not as a references, but as a bunch of code.
 This makes it easier to edit their contents to suit your needs.
 
 Users who have needs similar to you may prefer to gat the modified cell from your repo, rather than make similar edits themselves.
@@ -59,4 +59,4 @@ Desmata aims to explore the consequences of chosing "partition tolerant" when co
 It might be more difficult to build things this way, but if we can manage it then we will have more resilient technology.
 
 Despite these aspirations, there is nothing stopping you from pulling a desmata cell from Github, or writing one that depends on PyPI.
-But if Desmata's design seems kind of strange in places, this is why.
+But if Desmata's design seems kind of strange in places, it is in support of this goal.
