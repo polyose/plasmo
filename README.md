@@ -8,55 +8,69 @@ Desmata is under construction, come back later.
 | :---- | :---------- |
 | Plasmo**desmata** | (singular: plasmodesma) are microscopic channels which traverse the walls of adjacent plant cells, enabling transport and comunication between them. |
 | `desmata` | is a python library (and cli command) for managing subsets of a git repository (and their dependencies) as if they were seperate cells. |
-| `desmata.py` | conventionally defines a python module which inticates that its parent folder can be managed with `desmata`, these are typically found near a `flake.nix` and a `flake.lock`. |
 
-
-## A Package Manager?
-
-Desmata is at least **like** a package manager.
-When you use desmata to add one or more "cells" to a project repo, you get something that is both more and less encapsulated than a typical package.
-
-### More Encapsulated
-Desmata cells rely on [nix](https://github.com/NixOS/nix) to handle their dependencies, so if you use it to add a cell to your repo, that cell's dependencies will be managed more completely than you might expect from something like `pip`.
-
-### Less Encapsulated
-Unlike `pip` or `poetry`, desmata cells are moved in and out of repos not as a references, but as a bunch of code.
-This makes it easier to edit their contents to suit your needs.
-
-Users who have needs similar to you may prefer to gat the modified cell from your repo, rather than make similar edits themselves.
-In this way, Desmata hopes to achieve a sort of evolution and specialization of the cells that it manages.
-
-### What Kind of Packages?
-
-It would be strange to use Desmata to add a purely python cell to your purely python project.
-Python already has good ways to compose such things.
-
-Desmata is for providing pythonic access to nonpythonic things so that your still looks and feels like a python project.
-
-### Must it be Python?
-
-No, that's just what's familliar to me.
-If it works well, we can implement the same pattern in whatever language.
+Desmata lets users create and share "cells", which are pythonic interfaces into [Nix](https://github.com/NixOS/nix)-managed environments.
+Creating a cell requires some nix understanding, but using one only [requires that nix be installled](https://determinate.systems/posts/determinate-nix-installer).
 
 ## Usage
 
-This section TODO
+### Adding a cell
+
+Use `desmata add` to refer to a cell in another repo, and tell it where to put the cell is your repo:
+```
+$ tree
+  .
+  ├── .git
+  ├── ...
+  └── test
+      └── test_foo.py
+
+$ pip install desmata
+$ desmata add github.com/polyose/samples --remote-cell ./postgres --local-cell ./test/pg
+$ tree
+  .
+  ├── .git
+  ├── ...
+  └── test
+      ├── pg
+      │   ├── desmata.py
+      │   ├── flake.lock
+      │   └── flake.nix
+      └── test_foo.py
+```
+
+Your interface to the contents of the newly added cell will be in `desmata.py`.
+
+```python3
+# test_foo.py
+from .pg.desmata import Postgres
+def test_pg():
+    c = Postgres.get_connection()
+    ...
+```
+
+This example does not use your system's postgres, rather it uses the contents of `flake.nix` and `flake.lock` to build (or download) one for this project.
+This gives you stronger guarantees that all users of your project get the same version of postgres, while still ensuring that users on different architectures get something that works.
+
+TODO: a better example which makes it clear why you might prefer this to just using a docker container.
+
+### Writing a cell
+
+This section is TODO, tldr:  implement the `Desma` abstract class in `desmata.py`.
 
 ## P2P Aspirations
 
-Desmata represents a re-imagning of software packging, it asks:
+Desmata asks:
 
 >  Instead of worrying about the security, stability, or trustworthyness of 
 >  high-value targets like Github and PyPI, what if our systems had no high
->  value targets?
+>  value targets at all?
 
-We know that this is possible in principle: biological cells achieve remarkable feats of coordination by depending on inputs from only their neighbors.
-(Well ok, maybe trafficking software isn't quite the same trafficking solutes, but it still seems worth trying.)
+That is, Desmata aims to explore the consequences of chosing "partition tolerant" when confronted with the [CAP theorem](https://en.wikipedia.org/wiki/CAP_theorem).
+It might be more difficult to build things this way, but if we can manage it, then we will have more resilient technology.
 
-To put it differently:
-
-Desmata aims to explore the consequences of chosing "partition tolerant" when confronted with the [CAP theorem](https://en.wikipedia.org/wiki/CAP_theorem).
-It might be more difficult to build things this way, but if we can manage it then we will have more resilient technology.
+This is the logical space in which biological cells operate, and they achieve astounding feats of coordination (and with not even one widespread outage for billions of years).
+Desmata wants to make the same possible for software.
 
 Despite these aspirations, there is nothing stopping you from pulling a desmata cell from Github, or writing one that depends on PyPI.
-But if Desmata's design seems kind of strange in places, it is in support of this goal.
+But if Desmata's design seems kind of strange in places, it is probably because compromises were made in support of this dream.
