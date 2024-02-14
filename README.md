@@ -31,7 +31,7 @@ In this way, Desmata hopes to achieve a sort of evolution and specialization of 
 It would be strange to use Desmata to add a purely python cell to your purely python project.
 Python already has good ways to compose such things.
 
-It is for providing pythonic access to nonpythonic things so that your still looks and feels like a python project.
+Desmata is for providing pythonic access to nonpythonic things so that your still looks and feels like a python project.
 
 ### Must it be Python?
 
