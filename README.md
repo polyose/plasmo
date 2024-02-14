@@ -51,7 +51,7 @@ Desmata represents a re-imagning of software packging, it asks:
 >  value targets?
 
 We know that this is possible in principle: biological cells achieve remarkable feats of coordination by depending on inputs from only their neighbors.
-(Well ok, maybe trafficking software isn't quite the same trafficking solutes, but it still seems worth trying just the same.)
+(Well ok, maybe trafficking software isn't quite the same trafficking solutes, but it still seems worth trying.)
 
 To put it differently:
 
