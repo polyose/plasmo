@@ -53,8 +53,10 @@ This example does not use your system's postgres, rather it uses the contents of
 This gives you stronger guarantees that all users of your project get the same version of postgres, while still ensuring that users on different architectures get something that works.
 
 Desmata intends to provide strong encapsulation where it counts (that's Nix's job), while also remaining quite permiable.
-That's why you end up with new files in your repo: you may want to to edit these to specialize the cell to meet your needs.
-Later, other users with similar needs may want to add a cell based on your changes (this is how cells evolve). 
+That's why you end up with new files in your repo.
+
+Feel free to delete stuff you don't need, and add stuff you do--this is how cells evolve.
+Later, other users with similar needs may want to add a cell based on your changes.
 
 ### Writing a cell
 
@@ -69,10 +71,13 @@ Desmata asks:
 >  value targets at all?
 
 That is, Desmata aims to explore the consequences of chosing "partition tolerant" when confronted with the [CAP theorem](https://en.wikipedia.org/wiki/CAP_theorem).
-It might be more difficult to build things this way, but if we can manage it, then we will have more resilient technology.
+It might be more difficult to build things this way, but if we can manage it, then we will have made something resilient.
 
-This is the logical space in which biological cells operate, and they achieve astounding feats of coordination (and with not even one widespread outage for billions of years).
+This is the logical space in which biological cells operate, and they achieve astounding feats of coordination (with more 9's of uptime than any human creation).
 Desmata wants to make the same possible for software.
 
-Despite these aspirations, there is nothing stopping you from pulling a desmata cell from Github, or writing one that depends on PyPI.
+You don't need to care about this.
+You can pull a pulling a desmata cell from Github, or write one that depends on PyPI.
 Just know that if Desmata's design seems kind of strange in places, it is probably because compromises were made in support of this dream.
+
+P2P features (likely via [orbitdb](https://github.com/orbitdb/orbitdb)) coming soonish.
