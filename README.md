@@ -73,4 +73,4 @@ This is the logical space in which biological cells operate, and they achieve as
 Desmata wants to make the same possible for software.
 
 Despite these aspirations, there is nothing stopping you from pulling a desmata cell from Github, or writing one that depends on PyPI.
-But if Desmata's design seems kind of strange in places, it is probably because compromises were made in support of this dream.
+Just know that if Desmata's design seems kind of strange in places, it is probably because compromises were made in support of this dream.
