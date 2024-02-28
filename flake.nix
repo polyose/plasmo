@@ -6,32 +6,82 @@
       url = "github:nix-community/poetry2nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    pre-commit-hooks.url = "github:cachix/pre-commit-hooks.nix";
   };
 
-  outputs = { self, nixpkgs, flake-utils, poetry2nix }:
+  outputs = { self, nixpkgs, flake-utils, poetry2nix, pre-commit-hooks }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         inherit (poetry2nix.lib.mkPoetry2Nix { inherit pkgs; })
           mkPoetryApplication;
         pkgs = import nixpkgs { inherit system; };
-      in rec {
 
-        medina-poetry = mkPoetryApplication{ projectDir = ./.; };
+        desmata-poetry = mkPoetryApplication { projectDir = ./.; };
+
+        build-docs-script = pkgs.writeShellScriptBin "build-docs" ''
+          expect="$PWD/src/desmata/__init__.py"
+          from="$PWD/src/desmata"
+          to="$PWD/doc"
+          if [ ! -f $expect ]
+          then
+              echo "$expect not found, are you running this from the desmata repo root?"
+              exit 1
+          fi
+          if [ ! -d $to ]
+          then
+              echo "$to is not a directory, are you running this from the desmata repo root?"
+              exit 1
+          fi
+
+          echo building docs based on $from
+          echo putting them in $to
+          ${desmata-poetry.dependencyEnv}/bin/pdoc src/desmata -o doc
+        '';
+      in
+      {
+
+        checks = {
+          pre-commit-check = pre-commit-hooks.lib.${system}.run {
+            src = ./.;
+            hooks = {
+              nixpkgs-fmt.enable = true;
+            };
+          };
+        };
 
         apps = rec {
-          medina = {
-            type="app";
-            program="${medina}/bin/medina";
+          desmata = {
+            type = "app";
+            program = "${desmata-poetry}/bin/desmata";
           };
-          default = medina;
+
+          dsm = {
+            type = "app";
+            program = "${desmata-poetry}/bin/desmata";
+          };
+
+          build-docs = {
+            type = "app";
+            program = "${build-docs-script}/bin/build-docs";
+          };
+
+          default = desmata;
+        };
+
+        packages = rec {
+          desmata = desmata-poetry;
+          default = desmata;
         };
 
         devShells.default = pkgs.mkShell {
-          inputsFrom = [ medina-poetry ];
+          inputsFrom = [ desmata-poetry ];
           packages = [
+            pkgs.just
             pkgs.poetry
             pkgs.python311Packages.pylsp-mypy
           ];
+          inherit (self.checks.${system}.pre-commit-check) shellHook;
+
         };
       });
 }
