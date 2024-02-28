@@ -21,7 +21,7 @@
         build-docs-script = pkgs.writeShellScriptBin "build-docs" ''
           expect="$PWD/src/desmata/__init__.py"
           from="$PWD/src/desmata"
-          to="$PWD/doc"
+          to="$PWD/docs"
           if [ ! -f $expect ]
           then
               echo "$expect not found, are you running this from the desmata repo root?"
@@ -35,7 +35,7 @@
 
           echo building docs based on $from
           echo putting them in $to
-          ${desmata-poetry.dependencyEnv}/bin/pdoc src/desmata -o doc
+          ${desmata-poetry.dependencyEnv}/bin/pdoc src/desmata -o docs
         '';
       in
       {
