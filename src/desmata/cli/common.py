@@ -1,4 +1,8 @@
-from logging import Formatter, StreamHandler, getLogger, Logger, DEBUG, INFO
+from logging import DEBUG, INFO, Formatter, Logger, StreamHandler, getLogger
+
+import typer
+
+from desmata.config import Home, AppContext
 
 
 def cli_logger(verbose: bool) -> Logger:
@@ -18,3 +22,11 @@ def cli_logger(verbose: bool) -> Logger:
     handler.setFormatter(formatter)
     log.addHandler(handler)
     return log
+
+
+def callback(
+    ctx: typer.Context,
+    verbose: bool = typer.Option(False, "--verbose", "-v"),
+):
+    log = cli_logger(verbose=verbose)
+    ctx.obj = AppContext(home=Home(), log=log)

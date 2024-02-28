@@ -17,26 +17,6 @@
         pkgs = import nixpkgs { inherit system; };
 
         desmata-poetry = mkPoetryApplication { projectDir = ./.; };
-
-        build-docs-script = pkgs.writeShellScriptBin "build-docs" ''
-          expect="$PWD/src/desmata/__init__.py"
-          from="$PWD/src/desmata"
-          to="$PWD/docs"
-          if [ ! -f $expect ]
-          then
-              echo "$expect not found, are you running this from the desmata repo root?"
-              exit 1
-          fi
-          if [ ! -d $to ]
-          then
-              echo "$to is not a directory, are you running this from the desmata repo root?"
-              exit 1
-          fi
-
-          echo building docs based on $from
-          echo putting them in $to
-          ${desmata-poetry.dependencyEnv}/bin/pdoc src/desmata -o docs
-        '';
       in
       {
 
@@ -45,6 +25,14 @@
             src = ./.;
             hooks = {
               nixpkgs-fmt.enable = true;
+              unit-tests = {
+                enable = true;
+                name = "Regenerate Docs";
+                entry = "nix run .#desmata -- docs generate";
+                files = "src/desmata/.*$";
+                language = "system";
+                pass_filenames = false;
+              };
             };
           };
         };
@@ -58,11 +46,6 @@
           dsm = {
             type = "app";
             program = "${desmata-poetry}/bin/desmata";
-          };
-
-          build-docs = {
-            type = "app";
-            program = "${build-docs-script}/bin/build-docs";
           };
 
           default = desmata;
