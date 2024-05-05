@@ -13,26 +13,23 @@ from desmata.tool import tweaked
 from pydantic import BaseModel
 
 
-class ClosureItem(BaseModel):
+class Dependency(BaseModel, ABC):
     """
-    A closure is a collection of directories and files which are not part of a
-    cell, but which the cell depends on. Desmata populates these dependencies
-    before [setup()](desmata.cell.CellBase.setup) is called.
+    A closure is a collection of files which are not part of a cell, but which
+    the cell depends on.  Often these will be components that desmata knows how
+    to build
     """
 
     id: str
     """
-    A string which uniquely identifies the intended content of a ClosureItem.
+    A string which uniquely identifies the intended content of a Dependency.
     If nix is used, this corresponds with the nix store path.
     Otherwise this might be something like "jq-1.7.1-linux-amd64".
 
-    These are used to expose the stability of the cell-closure relationship.
-    If your closures are stable, 
+    These are used to expose the stability of the relationship between the cell
+    and its depenencies.
     
-    The intent is that these can be used as globally unique, human readable
-    names.  Desmata can be configured to gossip metadataabout the actual
-    bits that end up in these directories (hashes mostly). Comparing these 
-    hashes with your peers may help identify cases where:
+    Comparing these  hashes with your peers may help identify cases where:
     
     1. builds aren't repeatable
     2. someone has sneaked malware into a dependency
@@ -43,31 +40,38 @@ class ClosureItem(BaseModel):
     whether to trust the correspondence between a name and a set of bits.
     """
 
-    # pathlib.Path is not supported by pydantic
-    # so we store a pure path here
-    _path: PurePath
+    path: Path
 
-    @property
-    def path(self) -> Path:
+    @abstractmethod
+    @staticmethod
+    def ensure_path() -> Path:
         """
-        Where on the local filesystem is this external dir?
+        Returns the path of the closure item.
+        For multiple files, let this be a directory.
+
+        Used to build or otherwise obtain the needed file(s).
         """
-        return Path(self._path)
+        raise NotImplementedError()
 
     @staticmethod
-    def from_nix_build(path: Path) -> "ClosureItem":
-        return ClosureItem(id=path.name, _path=path)
-
-
-class ClosureBase(BaseModel, ABC):
-    @property
-    def relative_inputs(self) -> list[PurePath]:
+    def get_id(path: Path) -> str:
         """
-        A list of paths, relative to desmata.py, which are required to build
-        this cell's Closure.
-        """
-        return [PurePath("./flake.nix"), PurePath("./flake.lock")]
+        Parameter is the output of ensure_path, determine an id for them.
+        Returns the path of the closure item.
+        For multiple files, let this be a directory.
 
+        Used to build or otherwise obtain the needed file(s).
+        """
+        if "/nix/store" not in path.name:
+            raise NotImplementedError(
+                f"Unable to determine a suitable dependency ID from {path.resolve()}, "
+                "please override get_id(Path) on the corresponding subclass of Dependency"
+            )
+        else:
+            return path.name.replace("/nix/store/", "")
+
+
+class Closure(BaseModel, ABC):
     @property
     def inputs(self) -> list[Path]:
         """
@@ -84,20 +88,20 @@ class ClosureBase(BaseModel, ABC):
         peers, but these two are kept separate, and are only shared if
         configured to do so.  This makes it possible to store secrets in a cell,
         which is kept private, but to leave pars of the closure public.
-        """
-        # todo: detect the
-        return [Path(_path) for _path in self.relative_inputs]
 
-    @abstractproperty
-    def desmata_py(self):
-        raise NotImplementedError()
+        Returns a list of paths relative to the cell's root dir
+        """
+
+        return [Path("./flake.nix"), Path("./flake.lock")]
 
     @property
     def name(self):
         """
-        If you let some bits tell you their name, they might tell you a 
-        misleading one. To prevent this, Desmata instead asks you to name the 
-        cell. You do this when you decide where to put it.  The parent 
+        A cell's local name is its directory's name.  Cells have no global name.
+
+        If you let some bits tell you their name, they might tell you a
+        misleading one. To prevent this, Desmata instead asks you to name the
+        cell. You do this when you decide where to put it.  The parent
         directory from desmata.py determines the cell's name.
 
         When referencing cells which are not on your machine, desmata prefixes
@@ -127,16 +131,16 @@ class ClosureBase(BaseModel, ABC):
     @property
     def id(self):
         raise NotImplementedError(
-        """
-        A cell's ID is a hash of its contents.  We will use IPFS CID's for this.
-        """
+            """
+            A cell's ID is a hash of its contents.  We will use IPFS CID's for this.
+            """
         )
 
     @property
     def nucleus_id(self):
         """
         A cell's "nucleus" is all of the directories that it contains.  This
-        does not include the non-directory files in the cell's top level 
+        does not include the non-directory files in the cell's top level
         directory, these are called the "membrane".  If that's an
         uncomfortable word, don't worry, it's the last biology metaphor.
 
@@ -158,9 +162,9 @@ class ClosureBase(BaseModel, ABC):
         Desmata's philosophy here is that most people do not trust bits because
         they have audited them.  Instead, users trust bits because they trust
         somebody, who trusts somebody... who actually has audited those bits
-        (perhaps this is the original author of those bits, perhaps not).  If 
+        (perhaps this is the original author of those bits, perhaps not).  If
         the trust graph that emerges from such a commuity of users is large and
-        well connected, then users can potentially have high confidence that 
+        well connected, then users can potentially have high confidence that
         those bits are trustworthy.
 
         Trust graphs like this grow informally whenever one user tells another
@@ -179,21 +183,18 @@ class ClosureBase(BaseModel, ABC):
         the convenience of a globally unique name, but it also limits the degree
         to which users need to communicate in terms of cryptographc hashes.
         Instead, if Bob wants to trust Alice's packaged called foo, bob trusts
-        Alice.foo.  Desmata propagates this trust in terms of public keys and 
+        Alice.foo.  Desmata propagates this trust in terms of public keys and
         cryptographic hashes, but the experience remains relatively user
         friendly for Bob and Alice.
         """
-        raise NotImplementedError( )
-        
-
-    dirs: list[ClosureItem]
-
-    @abstractmethod
-    def __init__(self, nix: Nix, log: Logger):
         raise NotImplementedError()
 
+    @property
+    def contents(self) -> list[Dependency]:
+        
 
-ClosureBase.__doc__ = """
+
+Closure.__doc__ = """
 A cell on its own is unlikely to be useful. It probably needs other stuff too.
 
 For ianstance, if the cell contains a C program, you'll likely need a C compiler
@@ -257,7 +258,7 @@ def is_same_file(a: Path, b: Path) -> bool:
     return (a_stat.st_ino == b_stat.st_ino) and (a_stat.st_dev == b_stat.st_dev)
 
 
-class CellBase(ABC):
+class Cell(ABC):
     "see docstring at the end of this module"
 
     config_path: Path
@@ -361,5 +362,5 @@ class CellBase(ABC):
         raise NotImplementedError("")
 
 
-CellBase.__doc__ = """
+Cell.__doc__ = """
 """
