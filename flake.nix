@@ -13,10 +13,11 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         inherit (poetry2nix.lib.mkPoetry2Nix { inherit pkgs; })
-          mkPoetryApplication;
+          mkPoetryEnv mkPoetryApplication;
         pkgs = import nixpkgs { inherit system; };
 
         desmata-poetry = mkPoetryApplication { projectDir = ./.; };
+        desmata-poetry-dev = mkPoetryEnv { projectDir = ./.; editablePackageSources.desmata = ./src; };
       in
       {
 
@@ -58,9 +59,9 @@
         };
 
         devShells.default = pkgs.mkShell {
-          inputsFrom = [ desmata-poetry ];
+          inputsFrom = [ desmata-poetry-dev ];
           packages = [
-            pkgs.just
+            pkgs.nixpkgs-fmt
             pkgs.poetry
             pkgs.python311Packages.pylsp-mypy
           ];
