@@ -9,7 +9,7 @@ One of Desmata's goals is to make it possible to write Python like its Unison.
 The thing I like about Unison is that it resolves function implementations by cryptographic hash.
 Here's how that looks with Desmata:
 
-```
+```python3
 from desmata.get import from_hash
 from desmata.interface import Cell
 from typing import Callable
