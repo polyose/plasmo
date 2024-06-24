@@ -1,31 +1,41 @@
 from logging import Logger
 from pathlib import Path
 
-from desmata.interface import Cell, Closure, Dependency
-from desmata.nix import Nix
+from desmata.config import CellHome
+from desmata.interface import cell, Cell, Closure, Dependency, Builder, Loggers
 from desmata.tool import Tool
+from desmata.nix import Nix
 
 
-class Dependencies(Closure):
-    class IPFS(Dependency):
-        @staticmethod
-        def ensure_path(nix: Nix) -> Path:
-            return nix.build("ipfs", "/bin/ipfs")
+class IPFS(Tool, Dependency):
+    @staticmethod
+    def build_or_get(builder: Nix, home: CellHome, loggers: Loggers) -> 'IPFS':
 
-    class Git(Dependency):
-        @staticmethod
-        def ensure_path(nix: Nix) -> Path:
-            return nix.build("git", "/bin/git")
+        # get files
+        root = builder.build("ipfs")
+        id = Dependency.get_id(root)
+        ipfs = IPFS(id=id, root=root, hash='pending')
 
-    ipfs: "Dependencies.IPFS"
-    git: "Dependencies.Git"
+        # prep for use a tool
+        ipfs.prepare(home, loggers)
+        ipfs("init")
 
+        # calculate pending hash
+        ipfs.hash = ipfs.get_hash(ipfs.root)
+        return ipfs
 
-class IPFS(Tool):
-    def __init__(self, closure: Dependencies, log: Logger):
-        super().__init__(name="ipfs", path=closure.ipfs.path, log=log)
+    def prepare(self, home: CellHome, loggers: Loggers):
+        binary = self.root / "bin/ipfs"
 
-    def hash(self, target: Path) -> str:
+        Tool.__init__(
+            name="ipfs",
+            path=binary,
+            # don't inherit env vars
+            env_filter=lambda _: home.env([binary]),
+            log=loggers.proc,
+        )
+
+    def get_hash(self, target: Path) -> str:
         output = self("ipfs", "add", "-r", "--only-hash", str(target.resolve()))
         # sample output:
         #   added QmWfbz6Tvds3X2y3iUv994ootBQ8JdyspiEqYXtAVHPfVB builtins/flake.lock
@@ -37,15 +47,20 @@ class IPFS(Tool):
 
 
 class Git(Tool):
-    def __init__(self, closure: Dependencies, log: Logger):
+    def __init__(self, builder: Builder, log: Logger):
         super().__init__(name="git", path=closure.git.path, log=log)
 
 
-class DesmataBuiltins(Cell):
+class BuiltinsClosure(Closure):
     ipfs: IPFS
     git: Git
 
-    def __init__(self, closure: Dependencies, log: Logger):
-        super().__init__(closure)
-        self.ipfs = IPFS(closure, log=log)
-        self.git = Git(closure, log=log)
+
+@cell(Closure=BuiltinsClosure)
+class DesmataBuiltins(Cell[BuiltinsClosure]):
+    ipfs: IPFS
+    git: Git
+
+    def __init__(self, closure: BuiltinsClosure):
+        self.ipfs = IPFS(closure)
+        self.git = Git(closure)
