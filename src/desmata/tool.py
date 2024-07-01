@@ -4,14 +4,13 @@ import re
 import subprocess
 import sys
 from collections.abc import Callable
+from copy import deepcopy
 from dataclasses import dataclass, field
 from logging import Logger
+from pathlib import Path
 from textwrap import indent
 from typing import Any, TypeAlias, TypeVar
 from unittest.mock import Mock
-from pathlib import Path
-from copy import deepcopy
-
 
 ManifestObjects: TypeAlias = list[dict[str, Any]]
 MajorMinorPatch: TypeAlias = tuple[int, int, int]

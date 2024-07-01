@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from typing import TypeVar, Generic, Type, Dict
 
 from desmata.tool import Tool
-from desmata.nix import Nix
 
 # The interface I'm working on
 

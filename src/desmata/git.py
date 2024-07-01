@@ -1,7 +1,9 @@
-from pathlib import Path
-from medina.tool import Tool, MajorMinorPatch
-from typing import cast
 from logging import Logger
+from pathlib import Path
+from typing import cast
+
+from desmata.tool import MajorMinorPatch, Tool
+
 
 class Git(Tool):
     _repo_name: str | None = None

@@ -2,7 +2,7 @@ from logging import DEBUG, INFO, Formatter, Logger, StreamHandler, getLogger
 
 import typer
 
-from desmata.config import Home, AppContext
+from desmata.config import AppContext, Home
 
 
 def cli_logger(verbose: bool) -> Logger:

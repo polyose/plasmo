@@ -16,10 +16,10 @@ class Nix(Tool):
                 *cmd,
             ]
 
-        super().__init__(name="nix", cmd_filter=flakes_and_cmd, cwd=cwd, log=log)
+        super().__init__(name="nix", cmd_filter=flakes_and_cmd, cwd=cwd, log=log.getChild("nix"))
 
     def build(
-        self, output_name: str, path_suffix: str
+        self, output_name: str
     ) -> Path:
         return (
             Path(
@@ -30,7 +30,6 @@ class Nix(Tool):
                     "--no-link",
                 ).strip()
             )
-            / path_suffix
         )
 
     def get_nar_sha256_hex(self, path: Path) -> str:

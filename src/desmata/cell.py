@@ -1,8 +1,7 @@
-from abc import ABC, abstractmethod, abstractproperty
-import os
+from abc import ABC, abstractmethod
 from inspect import getfile
 from logging import Logger
-from pathlib import Path, PurePath
+from pathlib import Path
 from datetime import datetime
 
 from desmata.nix import Nix
@@ -42,8 +41,8 @@ class Dependency(BaseModel, ABC):
 
     path: Path
 
-    @abstractmethod
     @staticmethod
+    @abstractmethod
     def ensure_path() -> Path:
         """
         Returns the path of the closure item.
@@ -191,6 +190,7 @@ class Closure(BaseModel, ABC):
 
     @property
     def contents(self) -> list[Dependency]:
+        raise NotImplementedError()
         
 
 
@@ -364,3 +364,62 @@ class Cell(ABC):
 
 Cell.__doc__ = """
 """
+
+
+
+from desmata.builtins import DesmataBuiltins
+from desmata.get import from_cell_class
+
+def cell(*, Closure: type[SpecificClosure]):
+
+    def resolve_type(hint:str) -> type:
+        """
+        Dependency type hints are likely to be strings, resolve one to a
+        class instead.
+        """
+        parts = hint.split('.')
+        if len(parts) != 2:
+            raise NotImplementedError()
+        if part[0] != Closure.__name__:
+            raise NotImplementedError()
+        return getattr(Closure, part[1])
+
+
+
+
+    def build_init(Cell: type[Cell]):
+        def init(self):
+
+
+            directory = Path(Cell.__file__).parent
+            local_name = directory.name
+            # TODO: handle multiple cells on same device with same name
+
+            self.log = cell.get_cell_logger(self.name)
+            nix = Nix(cwd=directory, log=self.log)
+            for name, hint in closure_clazz.__annotations__.items():
+                if isinstance(hint, str):
+                    hint = resolve_type(hint)
+
+                if issubclass(hint, Dependency):
+                    Dep: Dependency = hint
+                    path = Dep.ensure_path(nix)
+                    id = Dep.get_id(path)
+                    hash = "pending"
+                    setattr(self, name, Dep(id=id, hash=hash, path=path))
+
+            hasher: Callable[[Path], str]
+            if Cell.__name__ == "DesmataBuiltins":
+                hasher = self.ipfs.hash
+            else:
+                hasher
+
+def is_same_file(a: Path, b: Path) -> bool:
+    """"
+    :return: True if the given paths represent the same file
+    """
+    a_stat = a.stat()
+    b_stat = b.stat()
+    return (a_stat.st_ino == b_stat.st_ino) and (a_stat.st_dev == b_stat.st_dev)
+
+

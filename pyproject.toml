@@ -16,7 +16,8 @@ pdoc = "^14.4.0"
 xdg-base-dirs = "^6.0.1"
 pydantic = "^2.6.3"
 pydantic-settings = "^2.3.3"
-inject = "^5.2.1"
+rich = "^13.7.1"
+injector = "^0.21.0"
 
 [build-system]
 requires = ["poetry-core"]
