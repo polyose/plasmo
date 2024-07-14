@@ -1,5 +1,5 @@
 import json
-from dataclasses import dataclass, fields  # for things we don't need to serialize
+from dataclasses import dataclass, fields, Field  # for things we don't need to serialize
 from logging import Logger
 from pathlib import Path
 from typing import cast
@@ -20,7 +20,7 @@ class Config(BaseModel):
     placeholder: str = "placeholder"
 
 
-@dataclass
+@dataclass(kw_only=True)
 class Home:
     dir: Path = Path.home()
     config: Path = xdg_config_home() / desmata
@@ -36,7 +36,7 @@ class Home:
             cast(Path, getattr(self, field.name)).mkdir(parents=True, exist_ok=True)
 
 
-@dataclass
+@dataclass(kw_only=True)
 class DesmataHome(Home):
     """
     Desmata stores data in the local filesystem.
@@ -50,7 +50,7 @@ class DesmataHome(Home):
     directories, see: https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
     """
 
-    desmata_config: Config = Config()
+    desmata_config: Config
 
     def __post_init__(self):
         desmata_config = self.config / "config.json"

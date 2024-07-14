@@ -1,16 +1,17 @@
 import logging
-from typing import Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable, TypeVar
 from desmata.interface import Cell
 
-from path import Path
-from SQLModel import Engine
+from pathlib import Path
+from sqlalchemy.engine import Engine
 
 
+@runtime_checkable
 class Loggers(Protocol):
     proc: logging.Logger
     msg: logging.Logger
 
-    def specialize(self, name: str) -> None:
+    def specialize(self, name: str) -> 'Loggers':
         pass
 
 
@@ -20,9 +21,9 @@ class CellEnv(Protocol):
     def env(self, path: Path | list[Path] = []) -> dict[str, str]:
         """
         Cell tools might not inherit env vars from the surrounding environment,
-        instead they get this env.  This helps ensure that cells encapsulate
-        their dependencies properly rather than depending on data from suprising
-        places in the user's environment.
+        instead they get this env.  This allows cells to encapsulate their dependencies
+        properly rather than depending on data from places in the user's environment
+        which desmata does not control.
         """
         pass
 
@@ -34,9 +35,22 @@ class UserspaceFiles(Protocol):
     data: Path
     state: Path
 
-    def home_for(*, cell_type: type[Cell]) -> Path:
+@runtime_checkable
+class DBFactory(Protocol):
+
+    def get_engine(self) -> Engine:
+        "creates a db if it doesn't exist"
         pass
 
-class DBFactory(Protocol):
-    def get_engine(self, userspace: UserspaceFiles) -> Engine:
+    def delete_db(self) -> None:
         pass
+
+SpecificCell = TypeVar("SpecificCell", bound=Cell)
+
+@runtime_checkable
+class CellFactory(Protocol):
+
+    
+    def get(CellType: type[SpecificCell]) -> SpecificCell:
+        pass
+

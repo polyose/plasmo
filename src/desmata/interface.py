@@ -2,7 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Generic, Protocol, TypeVar
+from typing import Generic, Protocol, TypeVar, runtime_checkable
 
 from pydantic import BaseModel
 
@@ -37,8 +37,7 @@ class Builder(Protocol):
         raise NotImplementedError()
 
 
-@dataclass
-class Loggers:
+class Loggers(Protocol):
     msg: logging.Logger
     proc: logging.Logger
 
@@ -60,20 +59,7 @@ class Bootstraps(Builder, Hasher, Loggers):
         raise self.hasher.hash(path)
 
 
-class HashableClass:
-    class_id: str
-
-    def __init__(self, class_id: str):
-        self.class_id = class_id
-
-    def __lt__(self, other: "HashableClass") -> bool:
-        return self.class_id < other.class_id
-
-    def __hash__(self) -> int:
-        return self.class_id.__hash__()
-
-
-class Dependency(BaseModel, HashableClass, ABC):
+class Dependency(BaseModel, ABC):
     id: str
     hash: str
     root: Path
@@ -82,8 +68,6 @@ class Dependency(BaseModel, HashableClass, ABC):
     def __init__(self, bootstraps: Bootstraps, home: CellHome) -> None:
         raise NotImplementedError()
 
-    def __post_init__(self):
-        HashableClass.__init__(self.home.cell_name)
 
     @staticmethod
     def get_id(root: Path) -> str:
@@ -96,14 +80,12 @@ class Dependency(BaseModel, HashableClass, ABC):
             return root.parts[3]
 
 
-class Closure(BaseModel, HashableClass, ABC):
+class Closure(BaseModel, ABC):
     local_name: str
     dependencies: list[Dependency]
     hash: str
     nucleus_hash: str
 
-    def __post_init__(self):
-        HashableClass.__init__(self.home.cell_name)
 
     @property
     def dependency_inputs(self) -> list[str]:
@@ -121,23 +103,8 @@ class Closure(BaseModel, HashableClass, ABC):
 SpecificClosure = TypeVar("SpecificClosure", bound=Closure)
 
 
-class Cell(ABC, HashableClass, Generic[SpecificClosure]):
+class Cell(ABC, Generic[SpecificClosure]):
     closure: SpecificClosure
 
     def __init__(self, closure: Closure):
         self.closure = closure
-        HashableClass.__init__()
-
-    @classmethod
-    def cell_path(cls) -> str:
-        return Path(cls.__file__)
-
-    @classmethod
-    def cell_name(cls) -> str:
-        # TODO: ensure no naming conflicts exist with previously registered cells
-        return Path(cls.__file__).name
-
-    def get_logger(self) -> logging.Logger:
-        # todo: add handlers so that `desmata observe` can view cell I/O
-        logger = logging.getLogger(f"desmata.{self.closure.local_name}")
-        logger.setLevel(logging.DEBUG)

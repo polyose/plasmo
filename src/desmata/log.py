@@ -8,9 +8,10 @@ class LoggersBase(Loggers):
     proc: logging.Logger
     msg: logging.Logger
 
-    def specialize(self, name: str) -> None:
+    def specialize(self, name: str) -> Loggers:
         self.proc = self.proc.getChild(name)
         self.msg = self.msg.getChild(name)
+        return self
 
 class TestLoggers(LoggersBase, Loggers):
     def __init__(self):

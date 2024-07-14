@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from desmata.protocols import CellEnv, Loggers
-from desmata.interface import cell, Cell, Closure, Dependency
+from desmata.interface import Cell, Closure, Dependency
 
 from desmata.tool import Tool
 from desmata.nix import Nix
@@ -44,7 +44,6 @@ class Deps:
 class BuiltinsClosure(Closure):
     ipfs: Deps.IPFS
 
-@cell(Closure=BuiltinsClosure)
 class DesmataBuiltins(Cell[BuiltinsClosure]):
     ipfs: Tool
 
