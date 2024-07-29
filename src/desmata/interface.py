@@ -2,7 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Generic, Protocol, TypeVar, runtime_checkable
+from typing import Generic, Protocol, TypeVar
 
 from pydantic import BaseModel
 
@@ -82,7 +82,6 @@ class Dependency(BaseModel, ABC):
 
 class Closure(BaseModel, ABC):
     local_name: str
-    dependencies: list[Dependency]
     hash: str
     nucleus_hash: str
 

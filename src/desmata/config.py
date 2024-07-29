@@ -1,5 +1,5 @@
 import json
-from dataclasses import dataclass, fields, Field  # for things we don't need to serialize
+from dataclasses import dataclass, fields  # for things we don't need to serialize
 from logging import Logger
 from pathlib import Path
 from typing import cast
