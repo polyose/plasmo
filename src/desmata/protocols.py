@@ -15,10 +15,12 @@ class Loggers(Protocol):
         pass
 
 
-class CellEnv(Protocol):
+class CellContext(Protocol):
+    cell_dir: Path
     home: Path
+    loggers: Loggers
 
-    def env(self, path: Path | list[Path] = []) -> dict[str, str]:
+    def env(self, dependency_dirs: Path | list[Path] = []) -> dict[str, str]:
         """
         Cell tools might not inherit env vars from the surrounding environment,
         instead they get this env.  This allows cells to encapsulate their dependencies

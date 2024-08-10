@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import TypeVar
 import logging
 from desmata.nix import Nix
-from desmata.interface import Cell, Closure, Dependency, Builder, Hasher, Bootstraps, Loggers
+from desmata.interface import Cell, Closure, Dependency, Builder, Hasher, Loggers
 from desmata.builtins.cell import DesmataBuiltins, BuiltinsClosure, IPFS, Git
 from desmata.tool import Tool
 from desmata.config import CellHome
