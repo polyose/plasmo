@@ -1,9 +1,15 @@
 import logging
-from typing import Protocol, runtime_checkable, TypeVar
+from typing import Protocol, runtime_checkable, TypeVar, TypeAlias
 from desmata.interface import Cell
+from collections.abc import Callable
 
 from pathlib import Path
 from sqlalchemy.engine import Engine
+from enum import StrEnum, auto
+
+class LogSubject(StrEnum):
+    proc = auto()
+    msg = auto()
 
 
 @runtime_checkable
@@ -11,8 +17,24 @@ class Loggers(Protocol):
     proc: logging.Logger
     msg: logging.Logger
 
+    def get(self, subject: LogSubject):
+        pass
+
     def specialize(self, name: str) -> 'Loggers':
         pass
+
+LogMatcher: TypeAlias = Callable[[...], bool]
+LogCallback: TypeAlias = Callable[[...], None]
+
+@runtime_checkable
+class LogListener(Protocol):
+
+    def register(self, key: str, subject: LogSubject, matcher: LogMatcher, callback: LogCallback):
+        pass
+
+    def unregister(self, key: str):
+        pass
+
 
 
 class CellContext(Protocol):

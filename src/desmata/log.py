@@ -1,5 +1,5 @@
 import logging
-from desmata.protocols import Loggers
+from desmata.protocols import Loggers, LogListener, LogMatcher, LogCallback, LogSubject
 from rich.highlighter import NullHighlighter
 from rich.logging import Console, RichHandler
 
@@ -12,6 +12,14 @@ class LoggersBase(Loggers):
         self.proc = self.proc.getChild(name)
         self.msg = self.msg.getChild(name)
         return self
+
+    def get(self, subject: LogSubject):
+        match(subject):
+            case LogSubject.proc:
+                return self.proc
+            case LogSubject.msg:
+                return self.msg
+                
 
 class TestLoggers(LoggersBase, Loggers):
     def __init__(self):
@@ -29,3 +37,28 @@ class TestLoggers(LoggersBase, Loggers):
                 )
             )
             logger.setLevel(logging.DEBUG)
+
+class LocalCallbackLogListener(LogListener):
+
+    log: Loggers
+
+    def __init__(self, log: Loggers):
+        self.log = log
+
+    registered: dict[str, tuple[logging.Logger, logging.StreamHandler]] = {}
+
+    def register(self, key: str, subject: LogSubject, matcher: LogMatcher, callback: LogCallback):
+
+        class CustomHandler(logging.StreamHandler):
+            def emit(self, record):
+                callback(record)
+
+        handler = CustomHandler()
+        logger = self.log.get(subject)
+        self.registered[key] = (logger, handler)
+        logger.addHandler(handler)
+
+
+    def unregister(self, key: str):
+        logger, handler = self.registered[key]
+        logger.removeHandler(handler)
