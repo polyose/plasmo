@@ -1,34 +1,127 @@
-from desmata.interface import Closure, Dependency
-from desmata.protocols import (
-    CellFactory,
-    CellContext,
-    DBFactory,
-    SpecificCell,
-    UserspaceFiles,
-    Loggers,
-)
-from desmata.exceptions import BadCellClassException
-from sqlalchemy import Engine
-from pathlib import Path
 import importlib
+import os
+import platform
+import re
+from pathlib import Path
+
+from sqlalchemy import Engine
 
 from desmata.builtins.cell import DesmataBuiltins, Tools
+from desmata.exceptions import BadCellClassException
+from desmata.interface import Closure, Dependency
+from desmata.protocols import (
+    Caller,
+    CellContext,
+    CellFactory,
+    DBFactory,
+    EnvFilter,
+    EnvVars,
+    Loggers,
+    SpecificCell,
+    UserspaceFiles,
+)
 
+default_passthrough_vars = [
+    "TERM",
+    "COLORTERM",
+    "EDITOR",
+    "VISUAL",
+    "PAGER",
+    "LANG",
+    "LC_.*",
+]
+
+user = "desmata-user"
+
+# home subdirs
+cache = ".cache"
+config = ".config"
+share = ".local/share"
+state = ".local/state"
+tmp = ".tmp"
+home_subdirs = [cache, config, share, state, tmp]
+
+class LocalCaller(Caller):
+
+    def __init__(self):
+        self.node = platform.node()
+        self.platform_desc = platform.platform()
+        self.user = os.getlogin()
+        self.pid = os.getpid()
+
+    node: str
+    user: str
+    platform: str
+    pid: int
 
 class BasicContext(CellContext):
+    caller: Caller
     cell_dir: Path
     home: Path
     loggers: Loggers
 
     def __init__(
-        self, name: str, cell_dir: Path, userspace: UserspaceFiles, loggers: Loggers
-    ):
-        self.cell_dir = cell_dir
-        self.home = userspace.data / "cell_homes" / name
-        self.loggers = loggers.specialize(name)
+            self, name: str, cell_dir: Path, userspace: UserspaceFiles, loggers: Loggers
+        ):
+            self.cell_dir = cell_dir
+            self.caller = LocalCaller()
 
-    def env(self, dependency_dirs: Path | list[Path] = []) -> dict[str, str]:
-        return {"HOME": self.home, "PATH": ":".join([dependency_dirs])}
+            self.home = userspace.data / "cells" / name / "home" / "desmata-user"
+            for subdir in home_subdirs:
+                home_subdir = self.home / subdir
+                home_subdir.mkdir(parents=True, exist_ok=True)
+            self.loggers = loggers.specialize(name)
+
+
+    def _get_default_env(self) -> EnvVars:
+        return {
+            "USER": "desmata-user",
+            "HOME": str(self.home), 
+            "TMP": str(self.home / tmp), 
+            "XDG_CACHE_HOME": str(self.home / cache), 
+            "XDG_CONFIG_HOME": str(self.home / config), 
+            "XDG_DATA_HOME": str(self.home / share),
+            "XDG_STATE_HOME": str(self.home / state),
+        }
+    
+    def _get_passed_thru_vars(self, passthru_vars: list[str]) -> EnvVars:
+        """
+        Called by the env filter, this passes external vars to the eventual subprocess,
+        but only if they're on the list.
+        """
+        env: EnvVars = {}
+        for var, val in os.environ.items():
+            for passthru_var in passthru_vars:
+                if re.match(passthru_var, var):
+                    env[passthru_var] = val
+        return env
+
+    def get_env_filter(
+        self,
+        exec_path: Path | list[Path] = [],
+        passthru_vars: list[str] = default_passthrough_vars,
+        set_default_env: bool = True,
+        env_overrides: EnvVars = {},
+    ) -> EnvFilter:
+
+        passthru = self._get_passed_thru_vars(passthru_vars)
+        env_vars = self._get_default_env() if set_default_env else {}
+
+        match exec_path:
+            case Path():
+                deps = str(exec_path)
+            case list():
+                deps = list(map(str, exec_path))
+
+
+        def filter(env: EnvVars) -> EnvVars:
+            inner_env = env_vars.copy()
+            inner_env.update(self._get_passed_thru_vars(passthru))
+            if exec_path := inner_env.get("PATH"):
+                exec_path = ":".join([*exec_path.split(":"), *deps])
+            return inner_env
+
+        return filter
 
 
 class DefaultCellFactory(CellFactory):
@@ -63,6 +156,10 @@ class DefaultCellFactory(CellFactory):
         self.log.msg.debug(f"Cell name candidates: {name_candidates}")
         return self._pick_name(name_candidates)
 
+    def _cell_file_inode_device(self, cell_class_file: Path) -> tuple[int, int]:
+        stat_info = os.stat(str(cell_class_file))
+        return (stat_info.st_ino, stat_info.st_dev)
+
     @staticmethod
     def _get_closure_type(CellType: type[SpecificCell]) -> type[Closure]:
         closure_types = []
@@ -94,7 +191,13 @@ class DefaultCellFactory(CellFactory):
         module = importlib.import_module(module_name)
         cell_file = Path(module.__file__)
         name = self._cell_name(cell_file)
-        context = BasicContext(name=name, cell_dir=cell_file.parent, userspace=self.userspace, loggers=self.log)
+        inode, device_id = self._cell_file_inode_device(cell_file)
+        context = BasicContext(
+            name=name,
+            cell_dir=cell_file.parent,
+            userspace=self.userspace,
+            loggers=self.log,
+        )
         self.log.msg.debug(f"CONTEXT, {context.__dict__}")
 
         ClosureType = DefaultCellFactory._get_closure_type(CellType)
@@ -106,9 +209,9 @@ class DefaultCellFactory(CellFactory):
         # get a hasher
         ipfs: Tools.IPFS
         if CellType is DesmataBuiltins:
-            ipfs = Tools.IPFS(root=dependencies["ipfs"].path, context=context)
+            ipfs = Tools.IPFS(root=dependencies["ipfs"].root, context=context)
         else:
             ipfs = self.get(DesmataBuiltins).ipfs
 
-        closure = ClosureType(local_name=name, hash="pending", nucleus_hash="pending")
+        closure = ClosureType(local_name=name, hash="pending", nucleus_hash="pending", **dependencies)
         # calculate the hashes

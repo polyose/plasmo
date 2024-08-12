@@ -7,6 +7,7 @@ from pathlib import Path
 from sqlalchemy.engine import Engine
 from enum import StrEnum, auto
 
+
 class LogSubject(StrEnum):
     proc = auto()
     msg = auto()
@@ -20,29 +21,50 @@ class Loggers(Protocol):
     def get(self, subject: LogSubject):
         pass
 
-    def specialize(self, name: str) -> 'Loggers':
+    def specialize(self, name: str) -> "Loggers":
         pass
+
+
+EnvVars: TypeAlias = dict[str, str]
+EnvFilter: TypeAlias = Callable[[EnvVars], EnvVars]
 
 LogMatcher: TypeAlias = Callable[[...], bool]
 LogCallback: TypeAlias = Callable[[...], None]
 
+
 @runtime_checkable
 class LogListener(Protocol):
-
-    def register(self, key: str, subject: LogSubject, matcher: LogMatcher, callback: LogCallback):
+    def register(
+        self, key: str, subject: LogSubject, matcher: LogMatcher, callback: LogCallback
+    ):
         pass
 
     def unregister(self, key: str):
         pass
 
 
+class Caller(Protocol):
+    node: str
+    user: str
+    platform: str
+    pid: int
+
 
 class CellContext(Protocol):
+    name: str
+    caller: Caller
     cell_dir: Path
     home: Path
     loggers: Loggers
 
-    def env(self, dependency_dirs: Path | list[Path] = []) -> dict[str, str]:
+    def get_env_filter(
+        self,
+        *,
+        exec_path: Path | list[Path],
+        passthru_vars: list[str],
+        set_default_env: bool,
+        env_overrides: EnvVars,
+    ) -> EnvFilter:
         """
         Cell tools might not inherit env vars from the surrounding environment,
         instead they get this env.  This allows cells to encapsulate their dependencies
@@ -50,6 +72,7 @@ class CellContext(Protocol):
         which desmata does not control.
         """
         pass
+
 
 @runtime_checkable
 class UserspaceFiles(Protocol):
@@ -59,9 +82,9 @@ class UserspaceFiles(Protocol):
     data: Path
     state: Path
 
+
 @runtime_checkable
 class DBFactory(Protocol):
-
     def get_engine(self) -> Engine:
         "creates a db if it doesn't exist"
         pass
@@ -69,12 +92,11 @@ class DBFactory(Protocol):
     def delete_db(self) -> None:
         pass
 
+
 SpecificCell = TypeVar("SpecificCell", bound=Cell)
+
 
 @runtime_checkable
 class CellFactory(Protocol):
-
-    
     def get(CellType: type[SpecificCell]) -> SpecificCell:
         pass
-

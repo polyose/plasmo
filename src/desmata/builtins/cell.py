@@ -10,18 +10,20 @@ from desmata.nix import Nix
 class Tools:
 
     class IPFS(Tool):
-        def __init__(root: Path, context: CellContext) -> Tool:
+        def __init__(self, root: Path, context: CellContext):
 
             loggers = context.loggers.specialize("ipfs")
-            return Tools.IPFS(
+            ipfs_path_entry = root / "bin"
+            ipfs_exe = ipfs_path_entry / "ipfs"
+            super().__init__(
                 name="ipfs",
-                path=root,
+                path=ipfs_exe,
                 log=loggers.proc,
-                env=context.env(dependency_dirs=root / "bin"),
+                env_filter=context.get_env_filter(exec_path=ipfs_path_entry),
             )
 
         def get_hash(self, target: Path) -> str:
-            output = self("ipfs", "add", "-r", "--only-hash", str(target.resolve()))
+            output = self("add", "-r", "--only-hash", str(target.resolve()))
             # sample output:
             #   added QmWfbz6Tvds3X2y3iUv994ootBQ8JdyspiEqYXtAVHPfVB builtins/flake.lock
             #   added QmcA67vzYhWSCBB3KKFFtTbyVxy349SRQpzUF4Be8r4hft builtins/flake.nix
@@ -42,12 +44,12 @@ class Deps:
             root = nix.build("ipfs")
 
             # use ipfs to hash ipfs
-            ipfs = Deps.IPFS.get_tool(root)
-            ipfs("init")
+            ipfs_tool = Tools.IPFS(root=root, context=context)
+            ipfs_tool("init")
 
-            ipfs.hash = ipfs.get_hash(root)
-            ipfs.id = super().get_id(root)
-            return ipfs
+            hash = ipfs_tool.get_hash(root)
+            id = Dependency.get_id(root)
+            return Deps.IPFS(id=id, hash=hash, root=root)
 
 
 class BuiltinsClosure(Closure):

@@ -32,6 +32,7 @@
 
         devShells.default = pkgs.mkShell {
           inputsFrom = [ desmata desmata-dev ];
+          #packages = [ pkgs.nixpkgs-fmt pkgs.python312Packages.pylsp-mypy pkgs.ruff ];
           packages = [ pkgs.nixpkgs-fmt ];
         };
       });
