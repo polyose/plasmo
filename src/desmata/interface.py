@@ -45,15 +45,13 @@ class Closure(BaseModel, ABC):
 
 
     @property
-    def dependency_inputs(self) -> list[str]:
+    @staticmethod
+    def nucleus() -> list[str]:
         return ["./flake.nix", "./flake.lock"]
 
     @property
-    def nucleus(self) -> list[str]:
-        return ["./flake.nix", "./flake.lock"]
-
-    @property
-    def membrane(self) -> list[str]:
+    @staticmethod
+    def membrane() -> list[str]:
         return ["./cell.py"]
 
 
