@@ -1,11 +1,11 @@
 import logging
-from typing import Protocol, runtime_checkable, TypeVar, TypeAlias
-from desmata.interface import Cell
 from collections.abc import Callable
-
-from pathlib import Path
-from sqlalchemy.engine import Engine
 from enum import StrEnum, auto
+from pathlib import Path
+from typing import Protocol, TypeAlias, runtime_checkable
+
+from sqlalchemy.engine import Engine
+
 
 
 class LogSubject(StrEnum):
@@ -93,10 +93,3 @@ class DBFactory(Protocol):
         pass
 
 
-SpecificCell = TypeVar("SpecificCell", bound=Cell)
-
-
-@runtime_checkable
-class CellFactory(Protocol):
-    def get(CellType: type[SpecificCell]) -> SpecificCell:
-        pass

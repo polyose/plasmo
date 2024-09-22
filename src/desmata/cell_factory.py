@@ -6,18 +6,18 @@ from pathlib import Path
 
 from sqlalchemy import Engine
 
-from desmata.builtins.cell import DesmataBuiltins, Tools
+from desmata.builtins.cell import Deps as DesmataBuiltinDeps
+from desmata.builtins.cell import DesmataBuiltins
+from desmata.builtins.cell import Tools as DesmataBuiltinTools
 from desmata.exceptions import BadCellClassException
-from desmata.interface import Closure, Dependency
+from desmata.interface import CellFactory, Closure, Dependency, Hasher, SpecificCell
 from desmata.protocols import (
     Caller,
     CellContext,
-    CellFactory,
     DBFactory,
     EnvFilter,
     EnvVars,
     Loggers,
-    SpecificCell,
     UserspaceFiles,
 )
 
@@ -41,8 +41,8 @@ state = ".local/state"
 tmp = ".tmp"
 home_subdirs = [cache, config, share, state, tmp]
 
-class LocalCaller(Caller):
 
+class LocalCaller(Caller):
     def __init__(self):
         self.node = platform.node()
         self.platform_desc = platform.platform()
@@ -54,6 +54,7 @@ class LocalCaller(Caller):
     platform: str
     pid: int
 
+
 class BasicContext(CellContext):
     caller: Caller
     cell_dir: Path
@@ -61,29 +62,28 @@ class BasicContext(CellContext):
     loggers: Loggers
 
     def __init__(
-            self, name: str, cell_dir: Path, userspace: UserspaceFiles, loggers: Loggers
-        ):
-            self.cell_dir = cell_dir
-            self.caller = LocalCaller()
+        self, name: str, cell_dir: Path, userspace: UserspaceFiles, loggers: Loggers
+    ):
+        self.cell_dir = cell_dir
+        self.caller = LocalCaller()
 
-            self.home = userspace.data / "cells" / name / "home" / "desmata-user"
-            for subdir in home_subdirs:
-                home_subdir = self.home / subdir
-                home_subdir.mkdir(parents=True, exist_ok=True)
-            self.loggers = loggers.specialize(name)
-
+        self.home = userspace.data / "cells" / name / "home" / "desmata-user"
+        for subdir in home_subdirs:
+            home_subdir = self.home / subdir
+            home_subdir.mkdir(parents=True, exist_ok=True)
+        self.loggers = loggers.specialize(name)
 
     def _get_default_env(self) -> EnvVars:
         return {
             "USER": "desmata-user",
-            "HOME": str(self.home), 
-            "TMP": str(self.home / tmp), 
-            "XDG_CACHE_HOME": str(self.home / cache), 
-            "XDG_CONFIG_HOME": str(self.home / config), 
+            "HOME": str(self.home),
+            "TMP": str(self.home / tmp),
+            "XDG_CACHE_HOME": str(self.home / cache),
+            "XDG_CONFIG_HOME": str(self.home / config),
             "XDG_DATA_HOME": str(self.home / share),
             "XDG_STATE_HOME": str(self.home / state),
         }
-    
+
     def _get_passed_thru_vars(self, passthru_vars: list[str]) -> EnvVars:
         """
         Called by the env filter, this passes external vars to the eventual subprocess,
@@ -103,7 +103,6 @@ class BasicContext(CellContext):
         set_default_env: bool = True,
         env_overrides: EnvVars = {},
     ) -> EnvFilter:
-
         passthru = self._get_passed_thru_vars(passthru_vars)
         env_vars = self._get_default_env() if set_default_env else {}
 
@@ -112,7 +111,6 @@ class BasicContext(CellContext):
                 deps = str(exec_path)
             case list():
                 deps = list(map(str, exec_path))
-
 
         def filter(env: EnvVars) -> EnvVars:
             inner_env = env_vars.copy()
@@ -187,6 +185,7 @@ class DefaultCellFactory(CellFactory):
         return dependency_types
 
     def get(self, CellType: type[SpecificCell]) -> SpecificCell:
+        # build a cell context
         module_name = CellType.__module__
         module = importlib.import_module(module_name)
         cell_file = Path(module.__file__)
@@ -200,18 +199,26 @@ class DefaultCellFactory(CellFactory):
         )
         self.log.msg.debug(f"CONTEXT, {context.__dict__}")
 
-        ClosureType = DefaultCellFactory._get_closure_type(CellType)
-        dependency_types = DefaultCellFactory._get_dependency_types(ClosureType)
-        dependencies = {
-            k: v.build_or_get(context) for k, v in dependency_types.items()
-        }  # closure = ClosureType(name=name, ...)
-
         # get a hasher
-        ipfs: Tools.IPFS
+        hasher: Hasher
+        ipfs_dep: DesmataBuiltinDeps.IPFS
         if CellType is DesmataBuiltins:
-            ipfs = Tools.IPFS(root=dependencies["ipfs"].root, context=context)
+            ipfs_dep = DesmataBuiltinDeps.IPFS.build_or_get(context, hasher=None)
+            hasher = DesmataBuiltinTools.IPFS(root=ipfs_dep.root, context=context)
         else:
-            ipfs = self.get(DesmataBuiltins).ipfs
+            builtins = self.get(DesmataBuiltins)
+            hasher = builtins.ipfs
+            ipfs_dep = builtins.closure.ipfs
 
-        closure = ClosureType(local_name=name, hash="pending", nucleus_hash="pending", **dependencies)
+        # populate the closure
+        deps: dict[str, Dependency] = {}
+        ClosureType = DefaultCellFactory._get_closure_type(CellType)
+        for attr_name, AttrType in DefaultCellFactory._get_dependency_types(
+            ClosureType
+        ).items():
+            if AttrType is DesmataBuiltinDeps.IPFS and attr_name == "ipfs":
+                deps[attr_name] = ipfs_dep
+            else:
+                deps[attr_name] = AttrType.build_or_get(context, hasher=hasher)
+
         # calculate the hashes

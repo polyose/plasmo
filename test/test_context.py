@@ -6,7 +6,8 @@ from desmata.builtins.cell import DesmataBuiltins
 from desmata.db import LocalSqlite
 from desmata.fs import DesmataFiles
 from desmata.log import TestLoggers
-from desmata.protocols import DBFactory, Loggers, UserspaceFiles, CellFactory
+from desmata.protocols import DBFactory, Loggers, UserspaceFiles
+from desmata.interface import CellFactory
 from desmata.cell_factory import DefaultCellFactory
 
 
@@ -31,6 +32,11 @@ def components(tmp_path: Path) -> Injector:
     return Injector([TestContext])
 
 
-def test_local_files(components: Injector):
+def test_local_files(tmp_path: Path, components: Injector):
     cell_factory = components.get(CellFactory)
-    builtins = cell_factory.get(DesmataBuiltins)
+    builtins: DesmataBuiltins = cell_factory.get(DesmataBuiltins)
+
+    foo = (tmp_path / "foo")
+    foo.write_text("bar")
+    hash = builtins.ipfs.get_hash(foo)
+    print(hash)

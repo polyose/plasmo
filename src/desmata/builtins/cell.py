@@ -1,17 +1,15 @@
 from pathlib import Path
 
 from desmata.protocols import CellContext
-from desmata.interface import Cell, Closure, Dependency
+from desmata.interface import Cell, Closure, Dependency, Hasher
 
 from desmata.tool import Tool
-from desmata.nix import Nix
+from desmata.cell_utils import get_nix
 
 
 class Tools:
-
-    class IPFS(Tool):
+    class IPFS(Tool, Hasher):
         def __init__(self, root: Path, context: CellContext):
-
             loggers = context.loggers.specialize("ipfs")
             ipfs_path_entry = root / "bin"
             ipfs_exe = ipfs_path_entry / "ipfs"
@@ -34,11 +32,10 @@ class Tools:
 
 
 class Deps:
-
     class IPFS(Dependency):
         @staticmethod
-        def build_or_get(context: CellContext) -> "Deps.IPFS":
-            nix = Nix(cwd=context.cell_dir, log=context.loggers.proc)
+        def build_or_get(context: CellContext, hasher: Hasher) -> "Deps.IPFS":
+            nix = get_nix(context)
 
             # get files
             root = nix.build("ipfs")
@@ -51,13 +48,23 @@ class Deps:
             id = Dependency.get_id(root)
             return Deps.IPFS(id=id, hash=hash, root=root)
 
+    class Git(Dependency):
+        @staticmethod
+        def build_or_get(context: CellContext, hasher: Hasher) -> "Deps.IPFS":
+            nix = get_nix(context)
+            root = nix.build("git")
+            hash = hasher.get_hash(root)
+            id = Dependency.get_id(root)
+            return Deps.Git(id=id, hash=hash, root=root)
+
 
 class BuiltinsClosure(Closure):
     ipfs: Deps.IPFS
+    git: Deps.Git
 
 
 class DesmataBuiltins(Cell[BuiltinsClosure]):
-    ipfs: Tool
+    ipfs: Tools.IPFS
 
     def __init__(self, closure: BuiltinsClosure, context: CellContext):
         self.ipfs = closure.ipfs.get_tool(context)

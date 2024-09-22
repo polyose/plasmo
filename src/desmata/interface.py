@@ -1,10 +1,11 @@
 import logging
-from abc import ABC
+from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Generic, Protocol, TypeVar
+from typing import Generic, Protocol, TypeVar, runtime_checkable
 
 from pydantic import BaseModel
 
+from desmata.protocols import CellContext
 
 
 class Hasher(Protocol):
@@ -26,6 +27,10 @@ class Dependency(BaseModel, ABC):
     hash: str
     root: Path
 
+    @staticmethod
+    @abstractmethod
+    def build_or_get(context: CellContext, hasher: Hasher) -> 'Dependency':
+        raise NotImplementedError()
 
     @staticmethod
     def get_id(root: Path) -> str:
@@ -63,3 +68,11 @@ class Cell(ABC, Generic[SpecificClosure]):
 
     def __init__(self, closure: Closure):
         self.closure = closure
+
+SpecificCell = TypeVar("SpecificCell", bound=Cell)
+
+
+@runtime_checkable
+class CellFactory(Protocol):
+    def get(CellType: type[SpecificCell]) -> SpecificCell:
+        pass
