@@ -4,7 +4,7 @@ from pathlib import Path
 from xdg_base_dirs import xdg_cache_home, xdg_config_home, xdg_data_home, xdg_state_home
 
 from desmata.consts import desmata
-from desmata.protocols import Loggers, UserspaceFiles
+from desmata.lower_protocols import Loggers, UserspaceFiles
 
 
 class CreatePathAttrs:

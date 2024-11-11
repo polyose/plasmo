@@ -1,13 +1,26 @@
 from pathlib import Path
 
-from desmata.protocols import CellContext
-from desmata.interface import Cell, Closure, Dependency, Hasher
-
-from desmata.tool import Tool
 from desmata.cell_utils import get_nix
+from desmata.higher_protocols import Hasher, Keeper
+from desmata.interface import Cell, Closure, Dependency
+from desmata.lower_protocols import CellContext
+from desmata.tool import Tool
 
 
 class Tools:
+    class SQLite(Tool):
+        def __init__(self, root: Path, context: CellContext):
+            loggers = context.loggers.specialize("sqlite")
+            sqlite_path_entry = root / "bin"
+            sqlite_exe = sqlite_path_entry / "sqlite3"
+            super().__init__(
+                name="sqlite",
+                path=sqlite_exe,
+                log=loggers.proc,
+                env_filter=context.get_env_filter(exec_path=sqlite_path_entry),
+            )
+        
+
     class IPFS(Tool, Hasher):
         def __init__(self, root: Path, context: CellContext):
             loggers = context.loggers.specialize("ipfs")
@@ -38,7 +51,7 @@ class Deps:
             nix = get_nix(context)
 
             # get files
-            root = nix.build("ipfs")
+            root, transitive_deps = nix.build("ipfs")
 
             # use ipfs to hash ipfs
             ipfs_tool = Tools.IPFS(root=root, context=context)
@@ -52,7 +65,7 @@ class Deps:
         @staticmethod
         def build_or_get(context: CellContext, hasher: Hasher) -> "Deps.IPFS":
             nix = get_nix(context)
-            root = nix.build("git")
+            root, transitive_deps = nix.build("git")
             hash = hasher.get_hash(root)
             id = Dependency.get_id(root)
             return Deps.Git(id=id, hash=hash, root=root)

@@ -20,9 +20,8 @@ class Nix(Tool):
 
     def build(
         self, output_name: str
-    ) -> Path:
-        return (
-            Path(
+    ) -> tuple[Path, list[Path]]:
+        path = Path(
                 self(
                     "build",
                     f".#{output_name}",
@@ -30,7 +29,12 @@ class Nix(Tool):
                     "--no-link",
                 ).strip()
             )
-        )
+        transitive_deps: list[Path] = []
+        for line in self("path-info", "-r", path).splitlines():
+            transitive_deps.append(Path(line))
+        return path, transitive_deps
+            
+
 
     def get_nar_sha256_hex(self, path: Path) -> str:
         raise NotImplementedError()

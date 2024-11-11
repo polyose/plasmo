@@ -1,3 +1,4 @@
+"a protocol is a 'lower' protocol if it does not depend on desmata.interfaces"
 import logging
 from collections.abc import Callable
 from enum import StrEnum, auto
@@ -5,8 +6,6 @@ from pathlib import Path
 from typing import Protocol, TypeAlias, runtime_checkable
 
 from sqlalchemy.engine import Engine
-
-
 
 class LogSubject(StrEnum):
     proc = auto()

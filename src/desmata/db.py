@@ -6,7 +6,7 @@ from sqlalchemy.engine import Engine
 
 # SQLModel.metadata_create_all needs this:
 from desmata import models  # noqa: F401
-from desmata.protocols import DBFactory, Loggers, UserspaceFiles
+from desmata.lower_protocols import DBFactory, Loggers, UserspaceFiles
 
 
 class LocalSqlite(DBFactory):

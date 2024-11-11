@@ -1,5 +1,5 @@
 import logging
-from desmata.protocols import Loggers, LogListener, LogMatcher, LogCallback, LogSubject
+from desmata.lower_protocols import Loggers, LogListener, LogMatcher, LogCallback, LogSubject
 from rich.highlighter import NullHighlighter
 from rich.logging import Console, RichHandler
 

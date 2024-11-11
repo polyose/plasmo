@@ -6,7 +6,7 @@ from desmata.builtins.cell import DesmataBuiltins
 from desmata.db import LocalSqlite
 from desmata.fs import DesmataFiles
 from desmata.log import TestLoggers
-from desmata.protocols import DBFactory, Loggers, UserspaceFiles
+from desmata.protocols.lower import DBFactory, Loggers, UserspaceFiles
 from desmata.interface import CellFactory
 from desmata.cell_factory import DefaultCellFactory
 

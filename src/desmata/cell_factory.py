@@ -11,7 +11,7 @@ from desmata.builtins.cell import DesmataBuiltins
 from desmata.builtins.cell import Tools as DesmataBuiltinTools
 from desmata.exceptions import BadCellClassException
 from desmata.interface import CellFactory, Closure, Dependency, Hasher, SpecificCell
-from desmata.protocols import (
+from desmata.lower_protocols import (
     Caller,
     CellContext,
     DBFactory,
@@ -216,9 +216,20 @@ class DefaultCellFactory(CellFactory):
         for attr_name, AttrType in DefaultCellFactory._get_dependency_types(
             ClosureType
         ).items():
-            if AttrType is DesmataBuiltinDeps.IPFS and attr_name == "ipfs":
-                deps[attr_name] = ipfs_dep
-            else:
-                deps[attr_name] = AttrType.build_or_get(context, hasher=hasher)
+            dep: Dependency
 
-        # calculate the hashes
+            # populate dep.root
+            if AttrType is DesmataBuiltinDeps.IPFS and attr_name == "ipfs":
+                dep = ipfs_dep
+            else:
+                dep = AttrType.build_or_get(context, hasher=hasher)
+
+            # populate dep.root and dep.id based on dep.root
+            dep.hash = hasher.get_hash(dep.root)
+            dep.id = dep.get_id(dep.root)
+            deps[attr_name] = dep
+
+        print(deps)
+        closure = ClosureType(**deps)
+        
+        return CellType(closure)
