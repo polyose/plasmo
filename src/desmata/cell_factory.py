@@ -10,9 +10,10 @@ from desmata.builtins.cell import Deps as DesmataBuiltinDeps
 from desmata.builtins.cell import DesmataBuiltins
 from desmata.builtins.cell import Tools as DesmataBuiltinTools
 from desmata.exceptions import BadCellClassException
-from desmata.interface import CellFactory, Closure, Dependency, Hasher, SpecificCell
+from desmata.interface import CellFactory, Closure, Dependency, SpecificCell
 from desmata.lower_protocols import (
     Caller,
+    DirHasher,
     CellContext,
     DBFactory,
     EnvFilter,
@@ -162,9 +163,10 @@ class DefaultCellFactory(CellFactory):
     def _get_closure_type(CellType: type[SpecificCell]) -> type[Closure]:
         closure_types = []
         for base in CellType.__orig_bases__:
-            for arg in base.__args__:
-                if issubclass(arg, Closure):
-                    closure_types.append(arg)
+            if hasattr(base, "__args__"):
+                for arg in base.__args__:
+                    if issubclass(arg, Closure):
+                        closure_types.append(arg)
 
         if len(closure_types) != 1:
             raise BadCellClassException(
@@ -200,7 +202,7 @@ class DefaultCellFactory(CellFactory):
         self.log.msg.debug(f"CONTEXT, {context.__dict__}")
 
         # get a hasher
-        hasher: Hasher
+        hasher: DirHasher
         ipfs_dep: DesmataBuiltinDeps.IPFS
         if CellType is DesmataBuiltins:
             ipfs_dep = DesmataBuiltinDeps.IPFS.build_or_get(context, hasher=None)

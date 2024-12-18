@@ -1,9 +1,17 @@
 from pathlib import Path
 
 from desmata.cell_utils import get_nix
-from desmata.higher_protocols import Hasher, Keeper
+from desmata.higher_protocols import (
+    CellHash,
+    CellHashes,
+    DependencyHash,
+    Hasher,
+    NucleusHash,
+    Storage,
+)
 from desmata.interface import Cell, Closure, Dependency
-from desmata.lower_protocols import CellContext
+from desmata.lower_protocols import CellContext, DirHasher
+from desmata.higher_protocols import ProtoDependency
 from desmata.tool import Tool
 
 
@@ -21,7 +29,7 @@ class Tools:
             )
         
 
-    class IPFS(Tool, Hasher):
+    class IPFS(Tool, DirHasher):
         def __init__(self, root: Path, context: CellContext):
             loggers = context.loggers.specialize("ipfs")
             ipfs_path_entry = root / "bin"
@@ -47,28 +55,37 @@ class Tools:
 class Deps:
     class IPFS(Dependency):
         @staticmethod
-        def build_or_get(context: CellContext, hasher: Hasher) -> "Deps.IPFS":
+        def build_or_get(context: CellContext, hasher: DirHasher) -> "Deps.IPFS":
             nix = get_nix(context)
 
             # get files
-            root, transitive_deps = nix.build("ipfs")
+            add = context.dep_adder(None, None) # todo: populate these
+
+            _root, _deps = nix.build("ipfs")
+            for tree in nix.grow_trees(_root, _deps):
+                dep = add(ProtoDependency(path=tree.info.path, deps )
+
+
+            root = context.situate(_root.path)
+            deps = map(context.situate, (x.path for x in _deps))
+
 
             # use ipfs to hash ipfs
-            ipfs_tool = Tools.IPFS(root=root, context=context)
+            ipfs_tool = Tools.IPFS(root=root.path, context=context)
             ipfs_tool("init")
 
             hash = ipfs_tool.get_hash(root)
             id = Dependency.get_id(root)
-            return Deps.IPFS(id=id, hash=hash, root=root)
+            return Deps.IPFS(id=id, hash=hash, root=root, closure=transitive_deps)
 
     class Git(Dependency):
         @staticmethod
-        def build_or_get(context: CellContext, hasher: Hasher) -> "Deps.IPFS":
+        def build_or_get(context: CellContext, hasher: DirHasher) -> "Deps.IPFS":
             nix = get_nix(context)
             root, transitive_deps = nix.build("git")
             hash = hasher.get_hash(root)
             id = Dependency.get_id(root)
-            return Deps.Git(id=id, hash=hash, root=root)
+            return Deps.Git(id=id, hash=hash, root=root, closure=transitive_deps)
 
 
 class BuiltinsClosure(Closure):
@@ -76,8 +93,23 @@ class BuiltinsClosure(Closure):
     git: Deps.Git
 
 
-class DesmataBuiltins(Cell[BuiltinsClosure]):
+class DesmataBuiltins(Cell[BuiltinsClosure], Hasher, Storage):
     ipfs: Tools.IPFS
 
     def __init__(self, closure: BuiltinsClosure, context: CellContext):
         self.ipfs = closure.ipfs.get_tool(context)
+
+    def get_dependency_hash(self, dep: Dependency) -> DependencyHash:
+        raise NotImplementedError()
+
+    def get_cell_hash(self, closure: Closure) -> CellHash:
+        raise NotImplementedError()
+
+    def get_nucleus_hash(self, closure: Closure) -> NucleusHash:
+        raise NotImplementedError()
+
+    def pack_cell(self, closure: Closure) -> CellHashes:
+        raise NotImplementedError()
+
+    def unpack_cell(self, hash: CellHash, into: Path) -> CellHashes:
+        raise NotImplementedError()

@@ -49,30 +49,6 @@ class Caller(Protocol):
     pid: int
 
 
-class CellContext(Protocol):
-    name: str
-    caller: Caller
-    cell_dir: Path
-    home: Path
-    loggers: Loggers
-
-    def get_env_filter(
-        self,
-        *,
-        exec_path: Path | list[Path],
-        passthru_vars: list[str],
-        set_default_env: bool,
-        env_overrides: EnvVars,
-    ) -> EnvFilter:
-        """
-        Cell tools might not inherit env vars from the surrounding environment,
-        instead they get this env.  This allows cells to encapsulate their dependencies
-        properly rather than depending on data from places in the user's environment
-        which desmata does not control.
-        """
-        pass
-
-
 @runtime_checkable
 class UserspaceFiles(Protocol):
     home: Path
@@ -89,6 +65,14 @@ class DBFactory(Protocol):
         pass
 
     def delete_db(self) -> None:
+        pass
+
+class PathAdder(Protocol):
+    def add(path: Path) -> Path:
+        """
+        Builders might put files anywhere, use an adder to bring them under desmata control.
+        This ensures that if they're deleted by the builder, desmata still has them.
+        """
         pass
 
 

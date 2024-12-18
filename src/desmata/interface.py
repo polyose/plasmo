@@ -1,21 +1,21 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Generic, Protocol, TypeAlias, TypeVar, runtime_checkable
+from typing import Generic, Protocol, TypeVar, runtime_checkable
 
 from pydantic import BaseModel
 
-from desmata.lower_protocols import CellContext, Hasher
+from desmata.lower_protocols import CellContext, DirHasher
 
 
 class Dependency(BaseModel, ABC):
     id: str
     hash: str
     root: Path
-    closure: list[Path]
+    closure: list['Dependency']
 
     @staticmethod
     @abstractmethod
-    def build_or_get(context: CellContext, hasher: Hasher) -> 'Dependency':
+    def build_or_get(context: CellContext, hasher: DirHasher) -> 'Dependency':
         raise NotImplementedError()
 
     @staticmethod
@@ -62,36 +62,3 @@ SpecificCell = TypeVar("SpecificCell", bound=Cell)
 class CellFactory(Protocol):
     def get(CellType: type[SpecificCell]) -> SpecificCell:
         pass
-
-# later on these will have different implementations so they can be made
-# to appear differently when shown to the user.
-
-DependencyHash: TypeAlias = str
-NucleusHash: TypeAlias = str
-CellHash: TypeAlias = str
-
-
-class Hasher(Protocol):
-
-    def get_dependency_hash(self, dep: Dependency) -> DependencyHash:
-        raise NotImplementedError()
-
-    def get_cell_hash(self, closure: Closure) -> CellHash:
-        raise NotImplementedError()
-
-    def get_nucleus_hash(self, closure: Closure) -> NucleusHash:
-        raise NotImplementedError()
-
-class Storage(Protocol):
-
-    def pack_dependency(self, dep: Dependency, hash: DependencyHash):
-        raise NotImplementedError()
-
-    def pack_cell(self, closure: Closure, hash: CellHash):
-        raise NotImplementedError()
-
-    def unpack_dependency(self, hash: DependencyHash, into: Path):
-        raise NotImplementedError()
-
-    def unpack_cell(self, hash: CellHash, into: Path):
-        raise NotImplementedError()
