@@ -1,20 +1,19 @@
 from logging import Logger
+import json
 from pathlib import Path
-from typing import cast, Iterator, ForwardRef
+from typing import cast, Iterator
 from collections import deque
-from typing import Iterator
 
 from desmata.tool import Cmd, MajorMinorPatch, Tool
 from desmata.messages import NixPathInfo
 
 from dataclasses import dataclass
 
-NixDependencyTreeRef = ForwardRef("NixDependencyTree")
-
 @dataclass
 class NixDependencyTree:
+    size: int
     info: NixPathInfo
-    immediate_dependencies: list[NixDependencyTreeRef]
+    immediate_dependencies: list['NixDependencyTree']
 
 class Nix(Tool):
     _version: MajorMinorPatch | None = None
@@ -40,10 +39,10 @@ class Nix(Tool):
                     "--no-link",
                 ).strip()
         dependency_info: list[NixPathInfo] = []
-        for line in self("path-info", "--json", "-r", path_str.splitlines()):
-            info = NixPathInfo.validate_json(line)
+        for info_str in json.loads(self("path-info", "--json", "-r", path_str)):
+            info = NixPathInfo.model_validate(info_str)
             dependency_info.append(info)
-        return dependency_info
+        return Path(path_str), dependency_info
             
 
 
@@ -64,10 +63,13 @@ class Nix(Tool):
         if not min_ver <= self.version:
             raise EnvironmentError(f"{self.name} is at {self.version} but {min_ver} is required")
 
+    @staticmethod
+    def get_id(path: Path) -> str:
+        return path.replace("/nix/store", "")
 
 
     @staticmethod
-    def grow_trees(info: list[NixPathInfo], root_path: str) -> Iterator[NixDependencyTree]:
+    def dep_dags(info: list[NixPathInfo], root_path: str) -> Iterator[NixDependencyTree]:
         path_infos: dict[str, NixPathInfo] = {x.path : x for x in info}
         built_trees: dict[str, NixDependencyTree] = {}
         to_process = deque([(root_path, 0)])  # (path, depth)
@@ -94,7 +96,11 @@ class Nix(Tool):
                 if ref in path_infos and ref in built_trees
             ]
 
+            # Calculate total size recursively - include current node (1) plus all dependencies
+            total_size = 1 + sum(dep.size for dep in deps)
+
             tree = NixDependencyTree(
+                size=total_size,
                 info=info,
                 immediate_dependencies=deps
             )

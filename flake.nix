@@ -11,7 +11,10 @@
   outputs = { self, nixpkgs, flake-utils, poetry2nix }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = nixpkgs.legacyPackages.${system};
+        pkgs = import nixpkgs { 
+          inherit system;
+          config.allowUnfree = true;  # for cursor
+        };
         inherit (poetry2nix.lib.mkPoetry2Nix { inherit pkgs; }) mkPoetryApplication;
         inherit (poetry2nix.lib.mkPoetry2Nix { inherit pkgs; }) mkPoetryEditablePackage;
 
@@ -33,7 +36,13 @@
         devShells.default = pkgs.mkShell {
           inputsFrom = [ desmata desmata-dev ];
           #packages = [ pkgs.nixpkgs-fmt pkgs.python312Packages.pylsp-mypy pkgs.ruff ];
-          packages = with pkgs; [ nixpkgs-fmt ];
+          buildInputs = with pkgs; [code-cursor];
+          packages = with pkgs; [ 
+            ruff
+            python312Packages.python-lsp-ruff
+            pyright
+            nixpkgs-fmt 
+          ];
         };
       });
 }

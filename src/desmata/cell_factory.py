@@ -10,16 +10,17 @@ from desmata.builtins.cell import Deps as DesmataBuiltinDeps
 from desmata.builtins.cell import DesmataBuiltins
 from desmata.builtins.cell import Tools as DesmataBuiltinTools
 from desmata.exceptions import BadCellClassException
-from desmata.interface import CellFactory, Closure, Dependency, SpecificCell
+from desmata.interface import Closure, Dependency, SpecificCell
+from desmata.higher_protocols import CellFactory
 from desmata.lower_protocols import (
     Caller,
     DirHasher,
-    CellContext,
     DBFactory,
     EnvFilter,
     EnvVars,
     Loggers,
     UserspaceFiles,
+    CellContext
 )
 
 default_passthrough_vars = [
@@ -99,6 +100,7 @@ class BasicContext(CellContext):
 
     def get_env_filter(
         self,
+        *,
         exec_path: Path | list[Path] = [],
         passthru_vars: list[str] = default_passthrough_vars,
         set_default_env: bool = True,
@@ -115,7 +117,7 @@ class BasicContext(CellContext):
 
         def filter(env: EnvVars) -> EnvVars:
             inner_env = env_vars.copy()
-            inner_env.update(self._get_passed_thru_vars(passthru))
+            inner_env.update(*self._get_passed_thru_vars(passthru))
             if exec_path := inner_env.get("PATH"):
                 exec_path = ":".join([*exec_path.split(":"), *deps])
             return inner_env
@@ -205,7 +207,7 @@ class DefaultCellFactory(CellFactory):
         hasher: DirHasher
         ipfs_dep: DesmataBuiltinDeps.IPFS
         if CellType is DesmataBuiltins:
-            ipfs_dep = DesmataBuiltinDeps.IPFS.build_or_get(context, hasher=None)
+            ipfs_dep = DesmataBuiltinDeps.IPFS.build_or_get(context)
             hasher = DesmataBuiltinTools.IPFS(root=ipfs_dep.root, context=context)
         else:
             builtins = self.get(DesmataBuiltins)

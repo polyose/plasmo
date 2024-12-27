@@ -1,21 +1,21 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Generic, Protocol, TypeVar, runtime_checkable
+from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
-from desmata.lower_protocols import CellContext, DirHasher
+from desmata.lower_protocols import DependencyId, DependencyHash, InternalPath, NucleusHash, CellHash, CellContext
 
 
 class Dependency(BaseModel, ABC):
-    id: str
-    hash: str
-    root: Path
-    closure: list['Dependency']
+    id: DependencyId
+    hash: DependencyHash
+    root: InternalPath
+    immediate_dependencies: dict[DependencyId, 'Dependency']
 
     @staticmethod
     @abstractmethod
-    def build_or_get(context: CellContext, hasher: DirHasher) -> 'Dependency':
+    def build_or_get(context: CellContext) -> 'Dependency':
         raise NotImplementedError()
 
     @staticmethod
@@ -31,8 +31,8 @@ class Dependency(BaseModel, ABC):
 
 class Closure(BaseModel, ABC):
     local_name: str
-    hash: str
-    nucleus_hash: str
+    hash: CellHash
+    nucleus_hash: NucleusHash
 
 
     @property
@@ -56,9 +56,3 @@ class Cell(ABC, Generic[SpecificClosure]):
         self.closure = closure
 
 SpecificCell = TypeVar("SpecificCell", bound=Cell)
-
-
-@runtime_checkable
-class CellFactory(Protocol):
-    def get(CellType: type[SpecificCell]) -> SpecificCell:
-        pass

@@ -10,8 +10,7 @@ from desmata.higher_protocols import (
     Storage,
 )
 from desmata.interface import Cell, Closure, Dependency
-from desmata.lower_protocols import CellContext, DirHasher
-from desmata.higher_protocols import ProtoDependency
+from desmata.lower_protocols import DirHasher, CellContext, ProtoDependency
 from desmata.tool import Tool
 
 
@@ -27,7 +26,6 @@ class Tools:
                 log=loggers.proc,
                 env_filter=context.get_env_filter(exec_path=sqlite_path_entry),
             )
-        
 
     class IPFS(Tool, DirHasher):
         def __init__(self, root: Path, context: CellContext):
@@ -55,28 +53,58 @@ class Tools:
 class Deps:
     class IPFS(Dependency):
         @staticmethod
-        def build_or_get(context: CellContext, hasher: DirHasher) -> "Deps.IPFS":
+        def build_or_get(context: CellContext) -> "Deps.IPFS":
             nix = get_nix(context)
 
-            # get files
-            add = context.dep_adder(None, None) # todo: populate these
-
+            # ensure ipfs exists externally 
             _root, _deps = nix.build("ipfs")
-            for tree in nix.grow_trees(_root, _deps):
-                dep = add(ProtoDependency(path=tree.info.path, deps )
-
-
-            root = context.situate(_root.path)
-            deps = map(context.situate, (x.path for x in _deps))
-
-
-            # use ipfs to hash ipfs
-            ipfs_tool = Tools.IPFS(root=root.path, context=context)
+            ipfs_tool = Tools.IPFS(root=_root, context=context)
             ipfs_tool("init")
 
-            hash = ipfs_tool.get_hash(root)
-            id = Dependency.get_id(root)
-            return Deps.IPFS(id=id, hash=hash, root=root, closure=transitive_deps)
+            # attach it (typicially it would already be bound to the context,
+            # but we're in the weird case where the hasher we need is the 
+            # dependency we're adding)
+            context.hash_path = ipfs_tool.get_hash
+
+            # bring it and its deps under desmata's control
+            deps_by_id = {}
+            for subdag in nix.dep_dags(_root, _deps):
+                protodep = ProtoDependency(
+                    target=subdag.info.path,
+                    dependencies=[
+                        (nix.get_id(str(x.path)), x.info.path) 
+                        for x in subdag.immediate_dependencies
+                    ],
+                )
+                path = context.internalize(protodep=protodep)
+                id = nix.get_id(subdag.info.path)
+
+                # nix.dep_dags provides leaves first and works towards the root
+                # thus, each immedate depencency should already have a Dependency in deps_by_id
+                # resolve the /nix/store deps to a Dependencies
+                immediate_dependencies = {}
+                for dep in subdag.immediate_dependencies:
+                    id = nix.get_id(dep.path)
+                    immediate_dependencies[id] = deps_by_id[id]
+
+                # construct a Dependency
+                id = nix.get_id(subdag.path)
+                dependency = Dependency(
+                        id=id,
+                        hash=context.hashDep(internal_path=path),
+                        root=path,
+                        immediate_dependencies=immediate_dependencies
+                    )
+                deps_by_id[id] = dependency
+            else:
+                raise ValueError("Nothing to build for ipfs")
+
+            return Deps.IPFS(**dependency.model_dump())
+                
+
+
+            
+
 
     class Git(Dependency):
         @staticmethod

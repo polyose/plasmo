@@ -12,11 +12,9 @@ class NixPathInfo(BaseModel):
     signatures: list[str]
     valid: bool
 
-    class Config:
-        json_encoders = {
+    model_config = {
+        "arbitrary_types_allowed": True,
+        "json_encoders": {
             Path: str
         }
-
-    model_config = {
-        "arbitrary_types_allowed": True
     }
